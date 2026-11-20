@@ -12,6 +12,8 @@
     <Version>1.0.0</Version>
     <Product>PlanLite</Product>
     <Description>Lightweight Windows work plan manager</Description>
+    <Copyright>Copyright (c) 2026 许晓东</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

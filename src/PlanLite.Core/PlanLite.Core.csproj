@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <RootNamespace>PlanLite.Core</RootNamespace>
     <AssemblyName>PlanLite.Core</AssemblyName>
+    <Copyright>Copyright (c) 2026 许晓东</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
