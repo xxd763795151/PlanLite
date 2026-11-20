@@ -1,0 +1,387 @@
+<ui:FluentWindow x:Class="PlanLite.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+                 xmlns:vm="clr-namespace:PlanLite.ViewModels"
+                 xmlns:views="clr-namespace:PlanLite.Views"
+                 Title="PlanLite"
+                 Width="416"
+                 SizeToContent="Height"
+                 WindowCornerPreference="Round"
+                 WindowBackdropType="None"
+                 ExtendsContentIntoTitleBar="True"
+                 ShowInTaskbar="False"
+                 ResizeMode="NoResize"
+                 Topmost="True"
+                 Background="{DynamicResource PlanPopupBackgroundBrush}"
+                 FontFamily="{StaticResource PlanFontFamily}"
+                 Deactivated="OnWindowDeactivated"
+                 SizeChanged="OnWindowSizeChanged"
+                 PreviewKeyDown="OnWindowPreviewKeyDown">
+
+    <Grid Background="{DynamicResource PlanPopupBackgroundBrush}">
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Setter Property="MinHeight" Value="360" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding TaskEditor.IsOpen}" Value="True">
+                        <Setter Property="MinHeight" Value="500" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Top Header -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource PlanHeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource PlanSubtleBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="PlanLite"
+                                   FontSize="15"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                        <Border Background="{DynamicResource PlanAccentSoftBrush}"
+                                CornerRadius="8"
+                                Padding="7,1"
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="{Binding WeekBadgeText}"
+                                       FontSize="10.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource PlanAccentBrush}" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding TodayDisplayText}"
+                               FontSize="11.5"
+                               Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+
+                <!-- Pin Button -->
+                <Button Grid.Column="1"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Command="{Binding TogglePinCommand}"
+                        Margin="0,0,6,0"
+                        Padding="7,6"
+                        ToolTip="固定窗口（固定后点击外部不自动隐藏）">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PlanChipButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PlanAccentSoftBrush}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PlanAccentBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <ui:SymbolIcon FontSize="14">
+                        <ui:SymbolIcon.Style>
+                            <Style TargetType="ui:SymbolIcon">
+                                <Setter Property="Symbol" Value="Pin20" />
+                                <Setter Property="Foreground" Value="{DynamicResource PlanSecondaryTextBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource PlanAccentBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:SymbolIcon.Style>
+                    </ui:SymbolIcon>
+                </Button>
+
+                <!-- Settings Button -->
+                <Button Grid.Column="2"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Command="{Binding NavigateByNameCommand}"
+                        CommandParameter="Settings"
+                        Style="{StaticResource PlanChipButtonStyle}"
+                        Padding="7,6"
+                        ToolTip="软件设置">
+                    <ui:SymbolIcon Symbol="Settings20"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Row 1: Primary Navigation Tabs OR Secondary Page Header -->
+        <Border Grid.Row="1"
+                Padding="12,8,12,4"
+                Visibility="{Binding IsPrimaryTabView, Converter={StaticResource BoolToVis}}">
+            <Grid Background="{DynamicResource PlanHeaderBackgroundBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <RadioButton Grid.Column="0"
+                             Content="总览"
+                             GroupName="MainNav"
+                             IsChecked="{Binding ActiveTab, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Overview}"
+                             Command="{Binding NavigateByNameCommand}"
+                             CommandParameter="Overview">
+                    <RadioButton.Template>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Pill"
+                                    CornerRadius="6"
+                                    Padding="0,6"
+                                    Margin="3"
+                                    Cursor="Hand"
+                                    Background="Transparent">
+                                <TextBlock x:Name="Txt"
+                                           Text="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="12.5"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Pill" Property="Background" Value="{DynamicResource PlanCardBackgroundBrush}" />
+                                    <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource PlanAccentBrush}" />
+                                    <Setter TargetName="Txt" Property="FontWeight" Value="SemiBold" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </RadioButton.Template>
+                </RadioButton>
+
+                <RadioButton Grid.Column="1"
+                             Content="今日计划"
+                             GroupName="MainNav"
+                             IsChecked="{Binding ActiveTab, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Today}"
+                             Command="{Binding NavigateByNameCommand}"
+                             CommandParameter="Today">
+                    <RadioButton.Template>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Pill"
+                                    CornerRadius="6"
+                                    Padding="0,6"
+                                    Margin="3"
+                                    Cursor="Hand"
+                                    Background="Transparent">
+                                <TextBlock x:Name="Txt"
+                                           Text="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="12.5"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Pill" Property="Background" Value="{DynamicResource PlanCardBackgroundBrush}" />
+                                    <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource PlanAccentBrush}" />
+                                    <Setter TargetName="Txt" Property="FontWeight" Value="SemiBold" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </RadioButton.Template>
+                </RadioButton>
+
+                <RadioButton Grid.Column="2"
+                             Content="本周计划"
+                             GroupName="MainNav"
+                             IsChecked="{Binding ActiveTab, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=ThisWeek}"
+                             Command="{Binding NavigateByNameCommand}"
+                             CommandParameter="ThisWeek">
+                    <RadioButton.Template>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Pill"
+                                    CornerRadius="6"
+                                    Padding="0,6"
+                                    Margin="3"
+                                    Cursor="Hand"
+                                    Background="Transparent">
+                                <TextBlock x:Name="Txt"
+                                           Text="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="12.5"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Pill" Property="Background" Value="{DynamicResource PlanCardBackgroundBrush}" />
+                                    <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource PlanAccentBrush}" />
+                                    <Setter TargetName="Txt" Property="FontWeight" Value="SemiBold" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </RadioButton.Template>
+                </RadioButton>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Padding="12,8,12,4"
+                Visibility="{Binding IsPrimaryTabView, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button Command="{Binding BackToOverviewCommand}"
+                        Style="{StaticResource PlanChipButtonStyle}"
+                        Padding="8,4">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="ArrowLeft20" FontSize="13" />
+                        <TextBlock Text="返回" FontSize="11.5" Margin="4,0,0,0" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ActiveSecondaryTitle}"
+                           FontSize="13.5"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+            </Grid>
+        </Border>
+
+        <!-- Row 2: Active Scrollable Content -->
+        <ScrollViewer Grid.Row="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="12,6,12,10">
+            <ContentControl Content="{Binding}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="ContentTemplate">
+                            <Setter.Value>
+                                <DataTemplate>
+                                    <views:OverviewView DataContext="{Binding Overview}" />
+                                </DataTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:MainNavigationTab.Today}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:DailyPlanView DataContext="{Binding DailyPlan}" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:MainNavigationTab.ThisWeek}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:WeeklyPlanView DataContext="{Binding WeeklyPlan}" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:MainNavigationTab.History}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:HistoryView DataContext="{Binding History}" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:MainNavigationTab.Reports}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:ReportView DataContext="{Binding Reports}" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:MainNavigationTab.Settings}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:SettingsView DataContext="{Binding Settings}" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </ScrollViewer>
+
+        <!-- Row 3: Bottom Utility Bar & Toast -->
+        <Border Grid.Row="3"
+                Background="{DynamicResource PlanHeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource PlanSubtleBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Background="{DynamicResource PlanAccentSoftBrush}"
+                        CornerRadius="6"
+                        Padding="8,4"
+                        Margin="0,0,0,6"
+                        Visibility="{Binding ToastMessage, Converter={StaticResource NotEmptyToVis}}">
+                    <TextBlock Text="{Binding ToastMessage}"
+                               FontSize="11.5"
+                               FontWeight="Medium"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource PlanAccentBrush}" />
+                </Border>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Command="{Binding NavigateByNameCommand}"
+                            CommandParameter="History"
+                            Style="{StaticResource PlanChipButtonStyle}"
+                            Margin="0,0,4,0"
+                            Padding="8,5">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="History20" FontSize="13" />
+                            <TextBlock Text="历史记录" FontSize="12" Margin="5,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="1"
+                            Command="{Binding NavigateByNameCommand}"
+                            CommandParameter="Reports"
+                            Style="{StaticResource PlanChipButtonStyle}"
+                            Margin="4,0,0,0"
+                            Padding="8,5">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="DocumentText20" FontSize="13" />
+                            <TextBlock Text="日报 / 周报" FontSize="12" Margin="5,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Inline Task Editor Overlay -->
+        <views:TaskEditorOverlay Grid.RowSpan="4"
+                                 DataContext="{Binding TaskEditor}" />
+    </Grid>
+</ui:FluentWindow>

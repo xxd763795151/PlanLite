@@ -1,0 +1,180 @@
+<UserControl x:Class="PlanLite.Views.HistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             FontFamily="{StaticResource PlanFontFamily}">
+    <StackPanel>
+        <!-- Search Box -->
+        <Border Style="{StaticResource PlanSectionCardStyle}" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon Symbol="Search20"
+                               FontSize="14"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource PlanMutedTextBrush}"
+                               Margin="0,0,8,0" />
+                <ui:TextBox Grid.Column="1"
+                            Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="搜索历史任务标题或备注关键词..."
+                            FontSize="12.5"
+                            Padding="6,4">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding SearchNowCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
+                <Button Grid.Column="2"
+                        Content="清空"
+                        Command="{Binding ClearSearchCommand}"
+                        Style="{StaticResource PlanChipButtonStyle}"
+                        Margin="6,0,0,0"
+                        Visibility="{Binding SearchKeyword, Converter={StaticResource NotEmptyToVis}}" />
+            </Grid>
+        </Border>
+
+        <!-- Period Mode Switcher (when not searching) -->
+        <Grid Margin="0,0,0,8"
+              Visibility="{Binding IsShowingSearchResults, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <RadioButton Grid.Column="0"
+                         Content="按日期浏览"
+                         IsChecked="{Binding IsDailyMode, Mode=OneWay}"
+                         Command="{Binding SwitchPeriodModeCommand}"
+                         CommandParameter="Daily"
+                         GroupName="HistoryMode"
+                         Margin="0,0,4,0" />
+            <RadioButton Grid.Column="1"
+                         Content="按自然周浏览"
+                         IsChecked="{Binding IsDailyMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=False}"
+                         Command="{Binding SwitchPeriodModeCommand}"
+                         CommandParameter="Weekly"
+                         GroupName="HistoryMode"
+                         Margin="4,0,0,0" />
+        </Grid>
+
+        <!-- Empty State -->
+        <Border Style="{StaticResource PlanSectionCardStyle}"
+                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding EmptyText}"
+                       HorizontalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{DynamicResource PlanMutedTextBrush}"
+                       Margin="0,12" />
+        </Border>
+
+        <!-- Search Results -->
+        <ItemsControl ItemsSource="{Binding SearchResults}"
+                      Visibility="{Binding IsShowingSearchResults, Converter={StaticResource BoolToVis}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Command="{Binding DataContext.OpenSearchHitCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            Style="{StaticResource PlanGhostButtonStyle}"
+                            HorizontalContentAlignment="Stretch"
+                            Margin="0,0,0,6">
+                        <Border Style="{StaticResource PlanCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                        <Border Background="{DynamicResource PlanAccentSoftBrush}"
+                                                CornerRadius="5"
+                                                Padding="5,1"
+                                                Margin="0,0,6,0">
+                                            <TextBlock Text="{Binding KindLabel}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource PlanAccentBrush}" />
+                                        </Border>
+                                        <TextBlock Text="{Binding PeriodLabel}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="12.5"
+                                               FontWeight="Medium"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                                    <TextBlock Text="{Binding Notes}"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource PlanMutedTextBrush}"
+                                               Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                    <Border Style="{StaticResource PlanStatusBadgeStyle}">
+                                        <TextBlock Style="{StaticResource PlanStatusBadgeTextStyle}" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Progress, StringFormat={}{0}%}"
+                                               HorizontalAlignment="Right"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                                               Margin="0,3,2,0" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Historical Period Rows -->
+        <StackPanel Visibility="{Binding IsShowingSearchResults, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+            <ItemsControl ItemsSource="{Binding PeriodRows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding DataContext.OpenPeriodCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Style="{StaticResource PlanGhostButtonStyle}"
+                                HorizontalContentAlignment="Stretch"
+                                Margin="0,0,0,6">
+                            <Border Style="{StaticResource PlanCardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding PeriodTitle}"
+                                                   FontSize="12.5"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                                        <TextBlock Text="{Binding StatsText}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                                                   Margin="0,2,0,4" />
+                                        <ProgressBar Value="{Binding AverageProgress}"
+                                                     Style="{StaticResource PlanProgressBarStyle}" />
+                                    </StackPanel>
+                                    <ui:SymbolIcon Grid.Column="1"
+                                                   Symbol="ChevronRight20"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource PlanMutedTextBrush}"
+                                                   Margin="10,0,0,0" />
+                                </Grid>
+                            </Border>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button Content="加载更多历史记录"
+                    Command="{Binding LoadMoreCommand}"
+                    Style="{StaticResource PlanChipButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Margin="0,4,0,2"
+                    Visibility="{Binding HasMorePeriods, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

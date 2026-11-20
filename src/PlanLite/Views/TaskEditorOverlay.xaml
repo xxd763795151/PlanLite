@@ -1,0 +1,289 @@
+<UserControl x:Class="PlanLite.Views.TaskEditorOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             FontFamily="{StaticResource PlanFontFamily}">
+    <Grid Background="{DynamicResource PlanOverlayBackdropBrush}"
+          Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}">
+        <Border Margin="14,24"
+                VerticalAlignment="Center"
+                Background="{DynamicResource PlanPopupBackgroundBrush}"
+                BorderBrush="{DynamicResource PlanSubtleBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="14">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="24"
+                                  ShadowDepth="4"
+                                  Opacity="0.28"
+                                  Color="#000000" />
+            </Border.Effect>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="520">
+                <StackPanel>
+                    <!-- Header -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{Binding PeriodDescription}"
+                                       FontSize="11.5"
+                                       Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            <TextBlock Text="任务详情（自动保存）"
+                                       FontSize="14.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource PlanPrimaryTextBrush}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Command="{Binding CloseCommand}"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Padding="6"
+                                ToolTip="关闭 (Esc)">
+                            <ui:SymbolIcon Symbol="Dismiss20" FontSize="14" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Title -->
+                    <TextBlock Text="任务标题"
+                               FontSize="11.5"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                               Margin="0,0,0,4" />
+                    <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="13"
+                             Padding="8,6"
+                             MaxLength="200" />
+                    <TextBlock Text="{Binding ValidationMessage}"
+                               FontSize="11"
+                               Foreground="{DynamicResource PlanDangerBrush}"
+                               Margin="0,3,0,0"
+                               Visibility="{Binding ValidationMessage, Converter={StaticResource NotEmptyToVis}}" />
+
+                    <!-- Daily -> Weekly Link -->
+                    <StackPanel Visibility="{Binding IsDailyTask, Converter={StaticResource BoolToVis}}"
+                                Margin="0,10,0,0">
+                        <TextBlock Text="关联本周计划"
+                                   FontSize="11.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                                   Margin="0,0,0,4" />
+                        <ComboBox ItemsSource="{Binding WeeklyLinkOptions}"
+                                  SelectedItem="{Binding SelectedWeeklyLink}"
+                                  DisplayMemberPath="Title"
+                                  FontSize="12.5" />
+                    </StackPanel>
+
+                    <!-- Weekly Progress Mode -->
+                    <Border Visibility="{Binding IsWeeklyTask, Converter={StaticResource BoolToVis}}"
+                            Style="{StaticResource PlanCardStyle}"
+                            Margin="0,10,0,0"
+                            Padding="10,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="自动计算进度"
+                                           FontSize="12.5"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                                <TextBlock Text="按关联每日任务进度等权平均"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1"
+                                             IsChecked="{Binding IsAutoMode, Mode=TwoWay}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Progress & Status -->
+                    <Grid Margin="0,12,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="任务进度"
+                                   FontSize="11.5"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                        <Border Grid.Column="1"
+                                Style="{StaticResource PlanStatusBadgeStyle}"
+                                Margin="0,0,6,0">
+                            <TextBlock Style="{StaticResource PlanStatusBadgeTextStyle}" />
+                        </Border>
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding Progress, StringFormat={}{0}%}"
+                                   FontSize="12.5"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                    </Grid>
+
+                    <Slider Value="{Binding Progress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            IsEnabled="{Binding CanEditProgress}"
+                            Style="{StaticResource PlanCompactSliderStyle}"
+                            Margin="0,2,0,4" />
+
+                    <Grid Margin="0,2,0,0"
+                          Visibility="{Binding CanEditProgress, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0"
+                                Content="未开始 0%"
+                                Command="{Binding SetQuickProgressCommand}"
+                                CommandParameter="0"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Margin="0,0,4,0" />
+                        <Button Grid.Column="1"
+                                Content="进行中 50%"
+                                Command="{Binding SetQuickProgressCommand}"
+                                CommandParameter="50"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Margin="2,0" />
+                        <Button Grid.Column="2"
+                                Content="已完成 100%"
+                                Command="{Binding SetQuickProgressCommand}"
+                                CommandParameter="100"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Margin="4,0,0,0" />
+                    </Grid>
+
+                    <!-- Linked Daily Preview for Weekly Tasks -->
+                    <StackPanel Visibility="{Binding IsWeeklyTask, Converter={StaticResource BoolToVis}}"
+                                Margin="0,10,0,0">
+                        <TextBlock Text="{Binding LinkedDailySummaryText}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                        <ItemsControl ItemsSource="{Binding LinkedDailyTasks}" Margin="0,4,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource PlanHeaderBackgroundBrush}"
+                                            CornerRadius="6"
+                                            Padding="8,4"
+                                            Margin="0,0,0,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="11.5"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Progress, StringFormat={}{0}%}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource PlanAccentBrush}"
+                                                       Margin="8,0,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Notes -->
+                    <TextBlock Text="备注说明"
+                               FontSize="11.5"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                               Margin="0,10,0,4" />
+                    <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="68"
+                             MaxHeight="130"
+                             VerticalScrollBarVisibility="Auto"
+                             FontSize="12.5"
+                             Padding="8,6" />
+
+                    <!-- Footer Actions -->
+                    <Grid Margin="0,14,0,0"
+                          Visibility="{Binding IsDeleteConfirmVisible, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Command="{Binding MoveUpCommand}"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Padding="7,5"
+                                ToolTip="上移">
+                            <ui:SymbolIcon Symbol="ArrowUp20" FontSize="13" />
+                        </Button>
+                        <Button Grid.Column="1"
+                                Command="{Binding MoveDownCommand}"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Padding="7,5"
+                                Margin="5,0,0,0"
+                                ToolTip="下移">
+                            <ui:SymbolIcon Symbol="ArrowDown20" FontSize="13" />
+                        </Button>
+
+                        <Button Grid.Column="3"
+                                Command="{Binding RequestDeleteCommand}"
+                                Style="{StaticResource PlanChipButtonStyle}"
+                                Margin="0,0,6,0"
+                                Padding="9,5">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Delete20" FontSize="13" Foreground="{DynamicResource PlanDangerBrush}" />
+                                <TextBlock Text="删除"
+                                           Margin="4,0,0,0"
+                                           Foreground="{DynamicResource PlanDangerBrush}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="4"
+                                Content="完成"
+                                Command="{Binding CloseCommand}"
+                                Style="{StaticResource PlanPrimaryButtonStyle}"
+                                Padding="14,5" />
+                    </Grid>
+
+                    <!-- Inline Delete Confirmation -->
+                    <Border Margin="0,14,0,0"
+                            Background="{DynamicResource PlanDangerSoftBrush}"
+                            CornerRadius="8"
+                            Padding="10,8"
+                            Visibility="{Binding IsDeleteConfirmVisible, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="确定删除此任务？"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource PlanDangerBrush}" />
+                            <Button Grid.Column="1"
+                                    Content="取消"
+                                    Command="{Binding CancelDeleteCommand}"
+                                    Style="{StaticResource PlanChipButtonStyle}"
+                                    Margin="0,0,6,0" />
+                            <Button Grid.Column="2"
+                                    Content="确认删除"
+                                    Command="{Binding ConfirmDeleteCommand}"
+                                    Style="{StaticResource PlanPrimaryButtonStyle}"
+                                    Background="{DynamicResource PlanDangerBrush}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

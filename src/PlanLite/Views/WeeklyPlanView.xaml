@@ -1,0 +1,285 @@
+<UserControl x:Class="PlanLite.Views.WeeklyPlanView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:helpers="clr-namespace:PlanLite.Helpers"
+             FontFamily="{StaticResource PlanFontFamily}">
+    <StackPanel>
+        <!-- Week Navigation & Summary -->
+        <Border Style="{StaticResource PlanSectionCardStyle}" Margin="0,0,0,10">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button Command="{Binding PreviousWeekCommand}"
+                            Style="{StaticResource PlanChipButtonStyle}"
+                            Padding="7,5"
+                            ToolTip="上一周">
+                        <ui:SymbolIcon Symbol="ChevronLeft20" FontSize="13" />
+                    </Button>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="6,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedWeekLabel}"
+                                       FontSize="12.5"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                            <Border Background="{DynamicResource PlanAccentSoftBrush}"
+                                    CornerRadius="8"
+                                    Padding="6,1"
+                                    Margin="5,0,0,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="{Binding PeriodBadgeText}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PlanAccentBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            Content="本周"
+                            Command="{Binding GoToCurrentWeekCommand}"
+                            Style="{StaticResource PlanChipButtonStyle}"
+                            Margin="0,0,5,0" />
+                    <Button Grid.Column="3"
+                            Command="{Binding NextWeekCommand}"
+                            Style="{StaticResource PlanChipButtonStyle}"
+                            Padding="7,5"
+                            ToolTip="下一周">
+                        <ui:SymbolIcon Symbol="ChevronRight20" FontSize="13" />
+                    </Button>
+                </Grid>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ProgressBar Value="{Binding AverageProgress}"
+                                 Style="{StaticResource PlanProgressBarStyle}"
+                                 VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding SummaryText}"
+                               FontSize="11"
+                               Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                               Margin="8,0,0,0" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Quick Add Weekly Task -->
+        <Border Style="{StaticResource PlanSectionCardStyle}" Margin="0,0,0,10">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="添加本周工作目标..."
+                                FontSize="12.5"
+                                Padding="8,5">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding AddTaskCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                    <Button Grid.Column="1"
+                            Command="{Binding AddTaskCommand}"
+                            Style="{StaticResource PlanPrimaryButtonStyle}"
+                            Margin="6,0,0,0"
+                            Padding="10,6">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Add20" FontSize="13" />
+                            <TextBlock Text="添加" Margin="4,0,0,0" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <CheckBox IsChecked="{Binding NewTaskAutoMode, Mode=TwoWay}"
+                          Content="自动计算进度（由关联的每日任务进度等权平均）"
+                          FontSize="11.5"
+                          Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Action Row -->
+        <Grid Margin="2,0,2,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="拖动卡片可排序 · 点击标题编辑详情"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource PlanMutedTextBrush}" />
+            <Button Grid.Column="1"
+                    Command="{Binding CarryOverToNextWeekCommand}"
+                    Style="{StaticResource PlanChipButtonStyle}"
+                    Padding="8,4"
+                    ToolTip="保留本周历史并将未完成目标结转至下一周">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="ArrowForward20" FontSize="12" />
+                    <TextBlock Text="结转未完成至下周" FontSize="11" Margin="4,0,0,0" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Empty State -->
+        <Border Style="{StaticResource PlanSectionCardStyle}"
+                Visibility="{Binding HasTasks, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+            <TextBlock Text="本周还没有制定工作计划，请在上方添加周目标"
+                       HorizontalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{DynamicResource PlanMutedTextBrush}"
+                       Margin="0,10" />
+        </Border>
+
+        <!-- Unfinished Weekly Tasks -->
+        <ListBox ItemsSource="{Binding UnfinishedTasks}"
+                 Style="{StaticResource PlanTaskListBoxStyle}"
+                 helpers:ListBoxDragDropBehavior.ReorderCommand="{Binding ReorderUnfinishedCommand}"
+                 Visibility="{Binding HasUnfinishedTasks, Converter={StaticResource BoolToVis}}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource PlanCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox IsChecked="{Binding IsCompleted, Mode=OneWay}"
+                                          Command="{Binding ToggleManualCompleteCommand}"
+                                          IsEnabled="{Binding IsManualMode}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0"
+                                          ToolTip="手动模式下可快速标记完成" />
+                                <Button Grid.Column="1"
+                                        Command="{Binding OpenEditorCommand}"
+                                        Style="{StaticResource PlanGhostButtonStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="12.5"
+                                                   FontWeight="Medium"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource PlanPrimaryTextBrush}" />
+                                        <TextBlock Text="有备注"
+                                                   FontSize="10.5"
+                                                   Foreground="{DynamicResource PlanMutedTextBrush}"
+                                                   Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}" />
+                                    </StackPanel>
+                                </Button>
+                                <Border Grid.Column="2"
+                                        Background="{DynamicResource PlanHeaderBackgroundBrush}"
+                                        CornerRadius="6"
+                                        Padding="6,2"
+                                        Margin="6,0,4,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ModeLabel}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                                </Border>
+                                <Border Grid.Column="3" Style="{StaticResource PlanStatusBadgeStyle}">
+                                    <TextBlock Style="{StaticResource PlanStatusBadgeTextStyle}" />
+                                </Border>
+                            </Grid>
+
+                            <!-- Manual Slider OR Auto Progress Bar -->
+                            <Grid Grid.Row="1" Margin="26,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="36" />
+                                </Grid.ColumnDefinitions>
+                                <Slider Value="{Binding Progress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Style="{StaticResource PlanCompactSliderStyle}"
+                                        Visibility="{Binding IsManualMode, Converter={StaticResource BoolToVis}}" />
+                                <ProgressBar Value="{Binding Progress}"
+                                             Style="{StaticResource PlanProgressBarStyle}"
+                                             VerticalAlignment="Center"
+                                             Visibility="{Binding IsAutoMode, Converter={StaticResource BoolToVis}}"
+                                             ToolTip="由关联的每日任务进度等权自动计算" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Progress, StringFormat={}{0}%}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Completed Weekly Tasks -->
+        <StackPanel Visibility="{Binding HasCompletedTasks, Converter={StaticResource BoolToVis}}" Margin="0,2,0,0">
+            <Button Command="{Binding ToggleCompletedExpandedCommand}"
+                    Style="{StaticResource PlanGhostButtonStyle}"
+                    Margin="2,2,0,6">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Checkmark20" FontSize="12" Foreground="{DynamicResource PlanSuccessBrush}" />
+                    <TextBlock Text="{Binding CompletedTasks.Count, StringFormat=已完成目标 ({0})}"
+                               FontSize="12"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource PlanSecondaryTextBrush}"
+                               Margin="5,0,6,0" />
+                    <TextBlock Text="点击展开/收起"
+                               FontSize="10.5"
+                               Foreground="{DynamicResource PlanMutedTextBrush}" />
+                </StackPanel>
+            </Button>
+
+            <ItemsControl ItemsSource="{Binding CompletedTasks}"
+                          Visibility="{Binding IsCompletedExpanded, Converter={StaticResource BoolToVis}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource PlanCardStyle}"
+                                Opacity="0.64"
+                                Padding="10,7"
+                                Margin="0,0,0,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox IsChecked="{Binding IsCompleted, Mode=OneWay}"
+                                          Command="{Binding ToggleManualCompleteCommand}"
+                                          IsEnabled="{Binding IsManualMode}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,6,0" />
+                                <Button Grid.Column="1"
+                                        Command="{Binding OpenEditorCommand}"
+                                        Style="{StaticResource PlanGhostButtonStyle}">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="12"
+                                               TextDecorations="Strikethrough"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                                </Button>
+                                <TextBlock Grid.Column="2"
+                                           Text="100%"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource PlanSuccessBrush}"
+                                           Margin="8,0,0,0" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
