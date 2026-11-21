@@ -77,7 +77,7 @@ public partial class App : Application
         _mainWindow = new MainWindow(_mainViewModel, _themeService);
         MainWindow = _mainWindow;
 
-        // Ensure hidden window HWND exists immediately so ThemeWatcher and TrayIcon work while hidden at launch.
+        // Ensure hidden window HWND exists immediately so Win32 window styling is ready before first show.
         _ = new WindowInteropHelper(_mainWindow).EnsureHandle();
 
         _themeService.Initialize(_mainWindow, _settings.ThemeMode);

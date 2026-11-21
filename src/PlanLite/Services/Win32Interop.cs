@@ -4,14 +4,30 @@ namespace PlanLite.Services;
 
 internal static class Win32Interop
 {
+    public const int WmDestroy = 0x0002;
+    public const int WmContextMenu = 0x007B;
+    public const int WmLButtonUp = 0x0202;
+    public const int WmRButtonUp = 0x0205;
     public const int WmHotkey = 0x0312;
+    public const int WmApp = 0x8000;
     public const int GwlExStyle = -20;
     public const int WsExToolWindow = 0x00000080;
     public const int DwmwaWindowCornerPreference = 33;
     public const int DwmwcpRound = 2;
 
+    public const uint NimAdd = 0x00000000;
+    public const uint NimModify = 0x00000001;
+    public const uint NimDelete = 0x00000002;
+    public const uint NifMessage = 0x00000001;
+    public const uint NifIcon = 0x00000002;
+    public const uint NifTip = 0x00000004;
+    public const int SmCxSmIcon = 49;
+    public const int SmCySmIcon = 50;
+    public const uint LrDefaultColor = 0x00000000;
+
     public const uint MonitorDefaultToNearest = 0x00000002;
     public static readonly IntPtr HwndMessage = new(-3);
+    public static readonly IntPtr IdiApplication = new(32512);
 
     [Flags]
     public enum HotkeyModifiers : uint
@@ -49,6 +65,29 @@ internal static class Win32Interop
         public uint DwFlags;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct NotifyIconData
+    {
+        public uint CbSize;
+        public IntPtr HWnd;
+        public uint UId;
+        public uint UFlags;
+        public uint UCallbackMessage;
+        public IntPtr HIcon;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+        public string SzTip;
+        public uint DwState;
+        public uint DwStateMask;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+        public string SzInfo;
+        public uint UTimeoutOrVersion;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+        public string SzInfoTitle;
+        public uint DwInfoFlags;
+        public Guid GuidItem;
+        public IntPtr HBalloonIcon;
+    }
+
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -74,6 +113,33 @@ internal static class Win32Interop
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo lpmi);
+
+    [DllImport("shell32.dll", EntryPoint = "Shell_NotifyIconW", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShellNotifyIcon(uint dwMessage, ref NotifyIconData lpData);
+
+    [DllImport("user32.dll", EntryPoint = "RegisterWindowMessageW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern uint RegisterWindowMessage(string lpString);
+
+    [DllImport("user32.dll")]
+    public static extern int GetSystemMetrics(int nIndex);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr CreateIconFromResourceEx(
+        byte[] presbits,
+        uint dwResSize,
+        [MarshalAs(UnmanagedType.Bool)] bool fIcon,
+        uint dwVer,
+        int cxDesired,
+        int cyDesired,
+        uint flags);
+
+    [DllImport("user32.dll", EntryPoint = "LoadIconW", SetLastError = true)]
+    public static extern IntPtr LoadIcon(IntPtr hInstance, IntPtr lpIconName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DestroyIcon(IntPtr hIcon);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
     private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
