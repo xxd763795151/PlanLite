@@ -57,7 +57,7 @@
             </Grid>
 
             <ProgressBar Grid.Row="1"
-                         Value="{Binding AverageProgress}"
+                         Value="{Binding AverageProgress, Mode=OneWay}"
                          Style="{StaticResource PlanProgressBarStyle}"
                          Height="4"
                          Margin="0,5,0,5" />

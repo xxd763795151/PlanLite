@@ -58,7 +58,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ProgressBar Value="{Binding AverageProgress}"
+                    <ProgressBar Value="{Binding AverageProgress, Mode=OneWay}"
                                  Style="{StaticResource PlanProgressBarStyle}"
                                  VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1"

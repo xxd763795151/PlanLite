@@ -14,6 +14,8 @@ namespace PlanLite;
 
 public partial class App : Application
 {
+    private static readonly TimeSpan ErrorToastCooldown = TimeSpan.FromSeconds(5);
+
     private SingleInstanceService? _singleInstance;
     private CrashLogger? _crashLogger;
     private SettingsStore? _settingsStore;
@@ -25,6 +27,8 @@ public partial class App : Application
     private MainViewModel? _mainViewModel;
     private MainWindow? _mainWindow;
     private MiniWidgetWindow? _miniWidgetWindow;
+    private DateTime _lastErrorToastUtc = DateTime.MinValue;
+    private bool _isHandlingDispatcherException;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -248,9 +252,28 @@ public partial class App : Application
     {
         DispatcherUnhandledException += (_, args) =>
         {
-            _crashLogger?.Log("DispatcherUnhandledException", args.Exception);
             args.Handled = true;
-            _mainViewModel?.ShowToast("操作出现异常，详情已写入本地错误日志");
+            if (_isHandlingDispatcherException)
+            {
+                return;
+            }
+
+            _isHandlingDispatcherException = true;
+            try
+            {
+                _crashLogger?.Log("DispatcherUnhandledException", args.Exception);
+
+                var now = DateTime.UtcNow;
+                if (now - _lastErrorToastUtc >= ErrorToastCooldown)
+                {
+                    _lastErrorToastUtc = now;
+                    _mainViewModel?.ShowToast("操作出现异常，详情已写入本地错误日志");
+                }
+            }
+            finally
+            {
+                _isHandlingDispatcherException = false;
+            }
         };
 
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>

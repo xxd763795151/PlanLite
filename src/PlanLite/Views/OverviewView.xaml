@@ -38,7 +38,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ProgressBar Value="{Binding WeeklyAverageProgress}"
+                    <ProgressBar Value="{Binding WeeklyAverageProgress, Mode=OneWay}"
                                  Style="{StaticResource PlanProgressBarStyle}"
                                  VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1"
@@ -96,7 +96,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="36" />
                                         </Grid.ColumnDefinitions>
-                                        <ProgressBar Value="{Binding Progress}"
+                                        <ProgressBar Value="{Binding Progress, Mode=OneWay}"
                                                      Style="{StaticResource PlanProgressBarStyle}"
                                                      VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="1"
@@ -192,7 +192,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ProgressBar Value="{Binding DailyAverageProgress}"
+                    <ProgressBar Value="{Binding DailyAverageProgress, Mode=OneWay}"
                                  Style="{StaticResource PlanProgressBarStyle}"
                                  VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1"
