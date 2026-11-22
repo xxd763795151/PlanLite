@@ -1,0 +1,181 @@
+name: Release PlanLite
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号（例如 v1.1.0 或 1.1.0）'
+        required: true
+        type: string
+      prerelease:
+        description: '标记为预发布版本（Pre-release）'
+        required: false
+        default: false
+        type: boolean
+      release_notes:
+        description: '自定义更新说明（留空则自动按提交记录生成）'
+        required: false
+        default: ''
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, Test & Publish Release
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and normalize version
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PRERELEASE: ${{ inputs.prerelease }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $rawVersion = if ($env:EVENT_NAME -eq 'workflow_dispatch') { $env:INPUT_VERSION } else { $env:REF_NAME }
+          $rawVersion = ($rawVersion ?? '').Trim()
+
+          if ($rawVersion -notmatch '^v?(\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?)$') {
+            throw "版本号格式无效: '$rawVersion'。请使用语义化版本号，例如 v1.1.0、1.1.0 或 v1.1.0-beta.1。"
+          }
+
+          $appVersion = $Matches[1]
+          $tagName = "v$appVersion"
+
+          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
+            git rev-parse -q --verify "refs/tags/$tagName" | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+              throw "标签 '$tagName' 已存在，请递增版本号后再触发发布。"
+            }
+          }
+
+          $isPrerelease = ($env:INPUT_PRERELEASE -eq 'true') -or ($appVersion -match '-')
+
+          "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+          "app_version=$appVersion" >> $env:GITHUB_OUTPUT
+          "is_prerelease=$($isPrerelease.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Resolved release tag: $tagName (app version: $appVersion, prerelease: $isPrerelease)"
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore & run unit tests
+        run: |
+          dotnet restore PlanLite.sln
+          dotnet test tests/PlanLite.Core.Tests/PlanLite.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal"
+
+      - name: Publish self-contained single-file executable
+        env:
+          APP_VERSION: ${{ steps.meta.outputs.app_version }}
+        run: |
+          dotnet publish src/PlanLite/PlanLite.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -p:Version=$env:APP_VERSION `
+            -o artifacts/publish
+
+          $exePath = "artifacts/publish/PlanLite.exe"
+          if (-not (Test-Path $exePath)) {
+            throw "Published executable not found: $exePath"
+          }
+
+          $sizeMb = [Math]::Round((Get-Item $exePath).Length / 1MB, 2)
+          Write-Host "Published PlanLite.exe ($sizeMb MB)"
+
+      - name: Package release assets & checksums
+        env:
+          TAG_NAME: ${{ steps.meta.outputs.tag_name }}
+        run: |
+          $releaseDir = "artifacts/release"
+          New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+
+          $exePath = "$releaseDir/PlanLite.exe"
+          Copy-Item "artifacts/publish/PlanLite.exe" -Destination $exePath -Force
+
+          $zipName = "PlanLite-$($env:TAG_NAME)-win-x64.zip"
+          $zipPath = "$releaseDir/$zipName"
+          $stageDir = "artifacts/zip-stage"
+          New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+          Copy-Item $exePath -Destination "$stageDir/PlanLite.exe" -Force
+          if (Test-Path "README.md") { Copy-Item "README.md" -Destination "$stageDir/README.md" -Force }
+          if (Test-Path "LICENSE") { Copy-Item "LICENSE" -Destination "$stageDir/LICENSE" -Force }
+
+          Compress-Archive -Path "$stageDir/*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
+
+          $hashes = @($exePath, $zipPath) | ForEach-Object {
+            $item = Get-Item $_
+            $hash = (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($item.Name)"
+          }
+          $sumsPath = "$releaseDir/SHA256SUMS.txt"
+          Set-Content -Path $sumsPath -Value $hashes -Encoding UTF8
+
+          Get-Content $sumsPath
+
+      - name: Create GitHub Release & upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ steps.meta.outputs.tag_name }}
+          IS_PRERELEASE: ${{ steps.meta.outputs.is_prerelease }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          $releaseDir = "artifacts/release"
+          $zipPath = "$releaseDir/PlanLite-$($env:TAG_NAME)-win-x64.zip"
+          $exePath = "$releaseDir/PlanLite.exe"
+          $sumsPath = "$releaseDir/SHA256SUMS.txt"
+
+          $ghArgs = @(
+            "release", "create", $env:TAG_NAME,
+            $exePath, $zipPath, $sumsPath,
+            "--title", "PlanLite $($env:TAG_NAME)"
+          )
+
+          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
+            $ghArgs += @("--target", $env:GITHUB_SHA)
+          }
+
+          if ($env:IS_PRERELEASE -eq 'true') {
+            $ghArgs += "--prerelease"
+          }
+
+          $notesFile = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          if (-not [string]::IsNullOrWhiteSpace($env:RELEASE_NOTES)) {
+            Set-Content -Path $notesFile -Value $env:RELEASE_NOTES -Encoding UTF8
+            $ghArgs += @("--notes-file", $notesFile)
+          }
+          else {
+            $ghArgs += "--generate-notes"
+          }
+
+          & gh @ghArgs
+          if ($LASTEXITCODE -ne 0) {
+            throw "gh release create failed with exit code $LASTEXITCODE."
+          }
