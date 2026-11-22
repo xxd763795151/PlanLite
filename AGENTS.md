@@ -7,6 +7,7 @@ PlanLite is a lightweight, fully local Windows 10/11 desktop work-plan manager b
 - Strictly local: **zero network requests**, no telemetry, no login, no Electron/WebView/server.
 - Minimal dependencies: `Microsoft.Data.Sqlite`, `WPF-UI`, `WPF-UI.Tray`, `CommunityToolkit.Mvvm` (no EF Core, no heavy DI container).
 - See [docs/PRD.md](docs/PRD.md) for the complete product specification.
+- See [docs/REQUIREMENTS_CHANGELOG.md](docs/REQUIREMENTS_CHANGELOG.md) for requirement change history, priority tiers, and conflict decision rules: check it before implementing changes that alter existing behavior or resolve requirement conflicts, and append a concise record (updating affected legacy entries' status) whenever requirements are added, changed, or superseded.
 
 ## 2. Project Architecture
 - `PlanLite.sln`

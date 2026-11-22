@@ -1,6 +1,6 @@
 # Windows 轻量级工作计划管理工具 PRD
 
-> **归档说明**：本文档为 PlanLite v1.0 初始产品设计文档，用于记录核心设计原则、性能约束与产品边界；后续功能更新与使用说明请以根目录 [README.md](../README.md) 及 GitHub Releases 为准。
+> **归档说明**：本文档为 PlanLite v1.0 初始产品设计文档，用于记录核心设计原则、性能约束与产品边界；后续需求变更记录与优先级决策依据请参见 [REQUIREMENTS_CHANGELOG.md](REQUIREMENTS_CHANGELOG.md)，功能更新与使用说明请以根目录 [README.md](../README.md) 及 GitHub Releases 为准。
 
 ## 1. 项目概述
 

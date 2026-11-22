@@ -2,7 +2,7 @@
 
 轻量级、纯本地化的 Windows 10 / Windows 11 个人工作计划管理工具。基于 C# / .NET 10 LTS 与 WPF (Fluent Design) 构建，驻留系统托盘、点击即用、零网络请求，专注于个人每日与每周工作计划管理、进度追踪及日报周报生成。
 
-> v1.0 初始产品设计文档与性能约束可参见 [docs/PRD.md](docs/PRD.md)。
+> v1.0 初始产品设计文档与性能约束可参见 [docs/PRD.md](docs/PRD.md)，后续需求变更记录与优先级决策依据可参见 [docs/REQUIREMENTS_CHANGELOG.md](docs/REQUIREMENTS_CHANGELOG.md)。
 
 ---
 
@@ -92,7 +92,8 @@ PlanLite/
 ├── README.md                     # 项目说明与使用指南
 ├── LICENSE                       # MIT 开源许可协议
 ├── docs/
-│   └── PRD.md                    # v1.0 初始产品设计文档（归档）
+│   ├── PRD.md                    # v1.0 初始产品设计文档（归档）
+│   └── REQUIREMENTS_CHANGELOG.md # 需求变更记录与优先级决策依据
 ├── scripts/
 │   └── publish.ps1               # Windows x64 单文件自包含发布脚本
 ├── src/
