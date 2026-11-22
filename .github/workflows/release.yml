@@ -61,8 +61,11 @@ jobs:
           $tagName = "v$appVersion"
 
           if ($env:EVENT_NAME -eq 'workflow_dispatch') {
-            git rev-parse -q --verify "refs/tags/$tagName" | Out-Null
-            if ($LASTEXITCODE -eq 0) {
+            $existingTag = git tag -l "$tagName"
+            if ($LASTEXITCODE -ne 0) {
+              throw "检查已有标签失败（exit code: $LASTEXITCODE）。"
+            }
+            if (-not [string]::IsNullOrWhiteSpace($existingTag)) {
               throw "标签 '$tagName' 已存在，请递增版本号后再触发发布。"
             }
           }
@@ -83,7 +86,9 @@ jobs:
       - name: Restore & run unit tests
         run: |
           dotnet restore PlanLite.sln
+          if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed with exit code $LASTEXITCODE." }
           dotnet test tests/PlanLite.Core.Tests/PlanLite.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal"
+          if ($LASTEXITCODE -ne 0) { throw "dotnet test failed with exit code $LASTEXITCODE." }
 
       - name: Publish self-contained single-file executable
         env:
@@ -100,6 +105,7 @@ jobs:
             -p:DebugSymbols=false `
             -p:Version=$env:APP_VERSION `
             -o artifacts/publish
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE." }
 
           $exePath = "artifacts/publish/PlanLite.exe"
           if (-not (Test-Path $exePath)) {
