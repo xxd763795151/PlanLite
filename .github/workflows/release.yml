@@ -115,35 +115,25 @@ jobs:
           $sizeMb = [Math]::Round((Get-Item $exePath).Length / 1MB, 2)
           Write-Host "Published PlanLite.exe ($sizeMb MB)"
 
-      - name: Package release assets & checksums
+      - name: Package release zip
         env:
           TAG_NAME: ${{ steps.meta.outputs.tag_name }}
         run: |
           $releaseDir = "artifacts/release"
           New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 
-          $exePath = "$releaseDir/PlanLite.exe"
-          Copy-Item "artifacts/publish/PlanLite.exe" -Destination $exePath -Force
-
           $zipName = "PlanLite-$($env:TAG_NAME)-win-x64.zip"
           $zipPath = "$releaseDir/$zipName"
           $stageDir = "artifacts/zip-stage"
           New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
-          Copy-Item $exePath -Destination "$stageDir/PlanLite.exe" -Force
+          Copy-Item "artifacts/publish/PlanLite.exe" -Destination "$stageDir/PlanLite.exe" -Force
           if (Test-Path "README.md") { Copy-Item "README.md" -Destination "$stageDir/README.md" -Force }
           if (Test-Path "LICENSE") { Copy-Item "LICENSE" -Destination "$stageDir/LICENSE" -Force }
 
           Compress-Archive -Path "$stageDir/*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
 
-          $hashes = @($exePath, $zipPath) | ForEach-Object {
-            $item = Get-Item $_
-            $hash = (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($item.Name)"
-          }
-          $sumsPath = "$releaseDir/SHA256SUMS.txt"
-          Set-Content -Path $sumsPath -Value $hashes -Encoding UTF8
-
-          Get-Content $sumsPath
+          $zipSizeMb = [Math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+          Write-Host "Packaged $zipName ($zipSizeMb MB)"
 
       - name: Create GitHub Release & upload assets
         env:
@@ -155,12 +145,10 @@ jobs:
         run: |
           $releaseDir = "artifacts/release"
           $zipPath = "$releaseDir/PlanLite-$($env:TAG_NAME)-win-x64.zip"
-          $exePath = "$releaseDir/PlanLite.exe"
-          $sumsPath = "$releaseDir/SHA256SUMS.txt"
 
           $ghArgs = @(
             "release", "create", $env:TAG_NAME,
-            $exePath, $zipPath, $sumsPath,
+            $zipPath,
             "--title", "PlanLite $($env:TAG_NAME)"
           )
 
