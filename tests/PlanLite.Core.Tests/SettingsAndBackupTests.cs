@@ -126,4 +126,100 @@ public sealed class SettingsAndBackupTests : IDisposable
         Assert.Throws<InvalidDataException>(() => backupService.RestoreBackup(badZip));
         Assert.Single(repo.GetDailyTasks(day));
     }
+
+    [Fact]
+    public void BackupAndRestore_RoundTripsNotesAndMigratesLegacyV1Backup()
+    {
+        var paths = new AppPaths(Path.Combine(_tempDir, "notes-live"), isPortableMode: true);
+        paths.EnsureDirectories();
+        var db = new SqliteDatabase(paths.DatabasePath);
+        db.Initialize();
+        var noteRepo = new NoteRepository(db);
+        var backupService = new BackupService(paths, db);
+
+        var customCat = noteRepo.CreateCategory("VPN凭证");
+        var savedNote = noteRepo.CreateNote(
+            "公司内网 VPN",
+            "host=10.1.2.3\n  user=dev",
+            customCat.Id,
+            isPinned: true,
+            isMasked: true);
+
+        var backupZip = Path.Combine(_tempDir, "notes-backup.zip");
+        backupService.CreateBackup(backupZip);
+
+        noteRepo.DeleteNote(savedNote.Id);
+        noteRepo.DeleteCategory(customCat.Id);
+        Assert.Equal(0, noteRepo.GetCategorySummary().TotalNoteCount);
+
+        backupService.RestoreBackup(backupZip);
+
+        var restored = noteRepo.GetNoteById(savedNote.Id);
+        Assert.NotNull(restored);
+        Assert.Equal("公司内网 VPN", restored!.Title);
+        Assert.Equal("host=10.1.2.3\n  user=dev", restored.Content);
+        Assert.Equal("VPN凭证", restored.CategoryName);
+        Assert.True(restored.IsPinned);
+        Assert.True(restored.IsMasked);
+
+        // Simulate a legacy v1 backup archive without notes / note_categories tables
+        var v1Dir = Path.Combine(_tempDir, "v1-stage");
+        Directory.CreateDirectory(v1Dir);
+        var v1DbPath = Path.Combine(v1Dir, AppPaths.DatabaseFileName);
+        var v1ConnStr = new SqliteConnectionStringBuilder
+        {
+            DataSource = v1DbPath,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Pooling = false
+        }.ToString();
+        using (var v1Conn = new SqliteConnection(v1ConnStr))
+        {
+            v1Conn.Open();
+            using var cmd = v1Conn.CreateCommand();
+            cmd.CommandText = """
+                CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE weekly_tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    week_start TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    notes TEXT NOT NULL DEFAULT '',
+                    progress INTEGER NOT NULL DEFAULT 0,
+                    status INTEGER NOT NULL DEFAULT 0,
+                    progress_mode INTEGER NOT NULL DEFAULT 0,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    carried_from_id INTEGER NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    completed_at TEXT NULL
+                );
+                CREATE TABLE daily_tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    plan_date TEXT NOT NULL,
+                    weekly_task_id INTEGER NULL REFERENCES weekly_tasks(id) ON DELETE SET NULL,
+                    title TEXT NOT NULL,
+                    notes TEXT NOT NULL DEFAULT '',
+                    progress INTEGER NOT NULL DEFAULT 0,
+                    status INTEGER NOT NULL DEFAULT 0,
+                    last_non_complete_progress INTEGER NOT NULL DEFAULT 0,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    carried_from_id INTEGER NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    completed_at TEXT NULL
+                );
+                INSERT INTO schema_meta (key, value) VALUES ('schema_version', '1');
+                """;
+            cmd.ExecuteNonQuery();
+        }
+        SqliteConnection.ClearAllPools();
+
+        var v1Zip = Path.Combine(_tempDir, "legacy-v1.zip");
+        System.IO.Compression.ZipFile.CreateFromDirectory(v1Dir, v1Zip);
+
+        backupService.RestoreBackup(v1Zip);
+
+        var migratedCategories = noteRepo.GetCategories();
+        Assert.Equal(new[] { "账号", "脚本", "链接" }, migratedCategories.Select(c => c.Name).ToArray());
+        Assert.Equal(0, noteRepo.GetCategorySummary().TotalNoteCount);
+    }
 }

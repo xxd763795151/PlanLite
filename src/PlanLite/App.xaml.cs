@@ -51,6 +51,7 @@ public partial class App : Application
         database.Initialize();
 
         var repository = new PlanRepository(database);
+        var noteRepository = new NoteRepository(database);
         var reportService = new ReportService();
         var backupService = new BackupService(paths, database);
         _settingsStore = new SettingsStore(paths.SettingsPath);
@@ -68,6 +69,7 @@ public partial class App : Application
             paths,
             _settings,
             repository,
+            noteRepository,
             _settingsStore,
             reportService,
             backupService,

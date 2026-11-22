@@ -163,6 +163,13 @@ public partial class MainWindow : FluentWindow
             return;
         }
 
+        if (_viewModel.NoteEditor.IsOpen)
+        {
+            _viewModel.NoteEditor.CloseCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (_viewModel.TaskEditor.IsOpen)
         {
             _viewModel.TaskEditor.CloseCommand.Execute(null);

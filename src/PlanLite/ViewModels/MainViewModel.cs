@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,12 +18,14 @@ public enum MainNavigationTab
     ThisWeek = 2,
     History = 3,
     Reports = 4,
-    Settings = 5
+    Settings = 5,
+    Notes = 6
 }
 
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly PlanRepository _repository;
+    private readonly NoteRepository _noteRepository;
     private readonly SettingsStore _settingsStore;
     private readonly ThemeService _themeService;
     private readonly GlobalHotkeyService _hotkeyService;
@@ -34,6 +37,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         AppPaths paths,
         AppSettings settings,
         PlanRepository repository,
+        NoteRepository noteRepository,
         SettingsStore settingsStore,
         ReportService reportService,
         BackupService backupService,
@@ -47,6 +51,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = paths;
         _settings = settings;
         _repository = repository;
+        _noteRepository = noteRepository;
         _settingsStore = settingsStore;
         _themeService = themeService;
         _hotkeyService = hotkeyService;
@@ -66,6 +71,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsMiniWidgetEnabled = settings.IsMiniWidgetEnabled;
 
         TaskEditor = new TaskEditorViewModel(repository, toast => RefreshAllData(toast));
+
+        NoteEditor = new NoteEditorViewModel(
+            noteRepository,
+            toast =>
+            {
+                Notes?.Reload();
+                if (!string.IsNullOrWhiteSpace(toast))
+                {
+                    ShowToast(toast);
+                }
+            },
+            CopyTextToClipboard);
+
+        Notes = new NotesViewModel(
+            noteRepository,
+            defaultCatId => NoteEditor.OpenNew(defaultCatId),
+            noteId => NoteEditor.OpenExisting(noteId),
+            CopyTextToClipboard,
+            () => NoteEditor.RefreshCategoriesIfOpen());
 
         Overview = new OverviewViewModel(
             repository,
@@ -147,10 +171,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public OverviewViewModel Overview { get; }
     public DailyPlanViewModel DailyPlan { get; }
     public WeeklyPlanViewModel WeeklyPlan { get; }
+    public NotesViewModel Notes { get; }
     public HistoryViewModel History { get; }
     public ReportViewModel Reports { get; }
     public SettingsViewModel Settings { get; }
     public TaskEditorViewModel TaskEditor { get; }
+    public NoteEditorViewModel NoteEditor { get; }
     public MiniWidgetViewModel MiniWidget { get; }
 
     public event Action? HostStateChanged;
@@ -181,7 +207,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnActiveTabChanged(MainNavigationTab value)
     {
-        IsPrimaryTabView = value is MainNavigationTab.Overview or MainNavigationTab.Today or MainNavigationTab.ThisWeek;
+        IsPrimaryTabView = value is MainNavigationTab.Overview
+            or MainNavigationTab.Today
+            or MainNavigationTab.ThisWeek
+            or MainNavigationTab.Notes;
         ActiveSecondaryTitle = value switch
         {
             MainNavigationTab.History => "历史记录",
@@ -192,6 +221,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         switch (value)
         {
+            case MainNavigationTab.Notes:
+                Notes.Reload();
+                break;
             case MainNavigationTab.History:
                 History.Reload();
                 break;
@@ -263,7 +295,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WeeklyPlan.Reload();
         MiniWidget.Refresh(today);
 
-        if (ActiveTab == MainNavigationTab.History)
+        if (ActiveTab == MainNavigationTab.Notes)
+        {
+            Notes.Reload();
+        }
+        else if (ActiveTab == MainNavigationTab.History)
         {
             History.Reload();
         }
@@ -282,6 +318,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void FlushPendingSaves()
     {
         TaskEditor.FlushIfOpen();
+        NoteEditor.FlushIfOpen();
         Overview.FlushPendingSaves();
         DailyPlan.FlushPendingSaves();
         WeeklyPlan.FlushPendingSaves();
@@ -311,6 +348,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void ReloadAfterBackupRestore()
     {
+        NoteEditor.CloseWithoutSaving();
+        TaskEditor.IsOpen = false;
+
         _settings = _settingsStore.Load();
         IsPinned = _settings.IsWindowPinned;
         IsMiniWidgetEnabled = _settings.IsMiniWidgetEnabled;
@@ -328,7 +368,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var today = DateOnly.FromDateTime(DateTime.Now);
         DailyPlan.SetDate(today);
         WeeklyPlan.SetWeek(today);
+        Notes.Reload();
         RefreshAllData();
+    }
+
+    private void CopyTextToClipboard(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(text);
+            ShowToast("已复制到剪贴板");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"复制失败: {ex.Message}");
+        }
     }
 
     private void UpdateHeaderMetadata(DateOnly today)

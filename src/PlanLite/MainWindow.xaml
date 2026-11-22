@@ -28,6 +28,9 @@
                     <DataTrigger Binding="{Binding TaskEditor.IsOpen}" Value="True">
                         <Setter Property="MinHeight" Value="500" />
                     </DataTrigger>
+                    <DataTrigger Binding="{Binding NoteEditor.IsOpen}" Value="True">
+                        <Setter Property="MinHeight" Value="500" />
+                    </DataTrigger>
                 </Style.Triggers>
             </Style>
         </Grid.Style>
@@ -131,6 +134,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <RadioButton Grid.Column="0"
@@ -228,6 +232,38 @@
                         </ControlTemplate>
                     </RadioButton.Template>
                 </RadioButton>
+
+                <RadioButton Grid.Column="3"
+                             Content="笔记"
+                             GroupName="MainNav"
+                             IsChecked="{Binding ActiveTab, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter=Notes}"
+                             Command="{Binding NavigateByNameCommand}"
+                             CommandParameter="Notes">
+                    <RadioButton.Template>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Pill"
+                                    CornerRadius="6"
+                                    Padding="0,6"
+                                    Margin="3"
+                                    Cursor="Hand"
+                                    Background="Transparent">
+                                <TextBlock x:Name="Txt"
+                                           Text="{TemplateBinding Content}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="12.5"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource PlanSecondaryTextBrush}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Pill" Property="Background" Value="{DynamicResource PlanCardBackgroundBrush}" />
+                                    <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource PlanAccentBrush}" />
+                                    <Setter TargetName="Txt" Property="FontWeight" Value="SemiBold" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </RadioButton.Template>
+                </RadioButton>
             </Grid>
         </Border>
 
@@ -287,6 +323,15 @@
                                     <Setter.Value>
                                         <DataTemplate>
                                             <views:WeeklyPlanView DataContext="{Binding WeeklyPlan}" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:MainNavigationTab.Notes}">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <views:NotesView DataContext="{Binding Notes}" />
                                         </DataTemplate>
                                     </Setter.Value>
                                 </Setter>
@@ -383,5 +428,9 @@
         <!-- Inline Task Editor Overlay -->
         <views:TaskEditorOverlay Grid.RowSpan="4"
                                  DataContext="{Binding TaskEditor}" />
+
+        <!-- Inline Note Editor Overlay -->
+        <views:NoteEditorOverlay Grid.RowSpan="4"
+                                 DataContext="{Binding NoteEditor}" />
     </Grid>
 </ui:FluentWindow>
